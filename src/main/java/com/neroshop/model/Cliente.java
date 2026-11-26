@@ -6,6 +6,8 @@ import java.util.Objects;
 public class Cliente {
 
     private int id;
+    /** Usuario con el que el cliente inicia sesion en la tienda (0 si no tiene cuenta). */
+    private int usuarioId;
     private String nombres;
     private String apellidos;
     private String documento;
@@ -15,6 +17,9 @@ public class Cliente {
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
+
+    public int getUsuarioId() { return usuarioId; }
+    public void setUsuarioId(int usuarioId) { this.usuarioId = usuarioId; }
 
     public String getNombres() { return nombres; }
     public void setNombres(String nombres) { this.nombres = nombres; }

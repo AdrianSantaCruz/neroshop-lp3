@@ -5,24 +5,32 @@ import com.neroshop.model.Producto;
 import com.neroshop.model.dao.CategoriaDAO;
 import com.neroshop.model.dao.DAOException;
 import com.neroshop.model.dao.ProductoDAO;
-import com.neroshop.view.ProductoPanel;
+import com.neroshop.util.Imagenes;
+import com.neroshop.view.admin.ProductoAdminPanel;
 
+import javax.swing.ImageIcon;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
+/** Mantenimiento de productos del panel de administracion. */
 public class ProductoController implements Refrescable {
 
-    private static final Categoria TODAS = new Categoria(0, "Todas las categorias", null);
+    private static final Categoria TODAS = new Categoria(0, "Todas las categorías", null);
 
-    private final ProductoPanel vista;
+    private final ProductoAdminPanel vista;
     private final ProductoDAO productoDAO;
     private final CategoriaDAO categoriaDAO;
 
     private List<Producto> productos = new ArrayList<>();
     private Producto seleccionado;
+    /** Foto del formulario (puede cambiar antes de guardar). */
+    private String fotoActual;
     private boolean cargandoCombos;
 
-    public ProductoController(ProductoPanel vista, ProductoDAO productoDAO, CategoriaDAO categoriaDAO) {
+    public ProductoController(ProductoAdminPanel vista, ProductoDAO productoDAO, CategoriaDAO categoriaDAO) {
         this.vista = vista;
         this.productoDAO = productoDAO;
         this.categoriaDAO = categoriaDAO;
@@ -35,6 +43,7 @@ public class ProductoController implements Refrescable {
         vista.getBtnNuevo().addActionListener(e -> limpiar());
         vista.getBtnGuardar().addActionListener(e -> guardar());
         vista.getBtnEliminar().addActionListener(e -> eliminar());
+        vista.getBtnFoto().addActionListener(e -> elegirFoto());
         vista.getTxtBuscar().getDocument().addDocumentListener(new CambioTextoListener(this::cargarProductos));
         vista.getCboFiltroCategoria().addActionListener(e -> {
             if (!cargandoCombos) {
@@ -82,11 +91,13 @@ public class ProductoController implements Refrescable {
     private void cargarProductos() {
         try {
             Categoria filtro = (Categoria) vista.getCboFiltroCategoria().getSelectedItem();
-            productos = productoDAO.listar(vista.getTxtBuscar().getText(), filtro == null ? 0 : filtro.getId());
+            productos = productoDAO.listar(vista.getTxtBuscar().getText(), filtro == null ? 0 : filtro.getId(),
+                    ProductoDAO.Orden.NOMBRE);
             vista.getModelo().setRowCount(0);
             for (Producto p : productos) {
                 vista.getModelo().addRow(new Object[]{
-                        p.getId(), p.getNombre(), p.getCategoriaNombre(), p.getTalla(),
+                        new ImageIcon(Imagenes.cubrir(p.getImagen(), 48, 58)),
+                        p.getId(), p.getNombre(), p.getCategoriaNombre(), p.getTallas().replace(",", ", "),
                         p.getColor(), p.getPrecio(), p.getStock()});
             }
         } catch (DAOException ex) {
@@ -100,11 +111,13 @@ public class ProductoController implements Refrescable {
             return;
         }
         seleccionado = productos.get(vista.getTabla().convertRowIndexToModel(fila));
+        fotoActual = seleccionado.getImagen();
+        vista.setFoto(fotoActual);
         vista.getTxtNombre().setText(seleccionado.getNombre());
         vista.getCboCategoria().setSelectedItem(new Categoria(seleccionado.getCategoriaId(), null, null));
-        vista.getCboTalla().setSelectedItem(seleccionado.getTalla());
+        vista.setTallasSeleccionadas(seleccionado.getListaTallas());
         vista.getTxtColor().setText(seleccionado.getColor());
-        vista.getTxtPrecio().setText(String.format(java.util.Locale.US, "%.2f", seleccionado.getPrecio()));
+        vista.getTxtPrecio().setText(String.format(Locale.US, "%.2f", seleccionado.getPrecio()));
         vista.getSpnStock().setValue(seleccionado.getStock());
         vista.getTxtDescripcion().setText(seleccionado.getDescripcion() == null ? "" : seleccionado.getDescripcion());
         vista.setModoEdicion(true);
@@ -112,7 +125,21 @@ public class ProductoController implements Refrescable {
 
     private void limpiar() {
         seleccionado = null;
+        fotoActual = null;
         vista.limpiarFormulario();
+    }
+
+    private void elegirFoto() {
+        File archivo = vista.elegirArchivoFoto();
+        if (archivo == null) {
+            return;
+        }
+        try {
+            fotoActual = Imagenes.guardarFotoProducto(archivo);
+            vista.setFoto(fotoActual);
+        } catch (IOException ex) {
+            vista.mostrarError("No se pudo cargar la foto: " + ex.getMessage());
+        }
     }
 
     private void guardar() {
@@ -126,7 +153,7 @@ public class ProductoController implements Refrescable {
         try {
             if (seleccionado == null) {
                 productoDAO.insertar(p);
-                vista.mostrarMensaje("Producto registrado correctamente.");
+                vista.mostrarMensaje("Producto registrado. Ya aparece en la tienda.");
             } else {
                 p.setId(seleccionado.getId());
                 productoDAO.actualizar(p);
@@ -144,11 +171,15 @@ public class ProductoController implements Refrescable {
         String nombre = vista.getTxtNombre().getText().trim();
         String color = vista.getTxtColor().getText().trim();
         Categoria categoria = (Categoria) vista.getCboCategoria().getSelectedItem();
+        List<String> tallas = vista.getTallasSeleccionadas();
         if (nombre.isEmpty()) {
             throw new IllegalArgumentException("El nombre del producto es obligatorio.");
         }
         if (categoria == null) {
-            throw new IllegalArgumentException("Primero registra una categoria.");
+            throw new IllegalArgumentException("Primero registra una categoría.");
+        }
+        if (tallas.isEmpty()) {
+            throw new IllegalArgumentException("Marca al menos una talla disponible.");
         }
         if (color.isEmpty()) {
             throw new IllegalArgumentException("El color es obligatorio.");
@@ -157,7 +188,7 @@ public class ProductoController implements Refrescable {
         try {
             precio = Double.parseDouble(vista.getTxtPrecio().getText().trim().replace(',', '.'));
         } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException("El precio debe ser un numero valido (ej. 49.90).");
+            throw new IllegalArgumentException("El precio debe ser un número válido (ej. 49.90).");
         }
         if (precio <= 0) {
             throw new IllegalArgumentException("El precio debe ser mayor a cero.");
@@ -166,11 +197,12 @@ public class ProductoController implements Refrescable {
         Producto p = new Producto();
         p.setNombre(nombre);
         p.setCategoriaId(categoria.getId());
-        p.setTalla((String) vista.getCboTalla().getSelectedItem());
+        p.setTallas(String.join(",", tallas));
         p.setColor(color);
         p.setPrecio(Math.round(precio * 100.0) / 100.0);
         p.setStock((Integer) vista.getSpnStock().getValue());
         p.setDescripcion(vista.getTxtDescripcion().getText().trim());
+        p.setImagen(fotoActual);
         return p;
     }
 
@@ -178,7 +210,7 @@ public class ProductoController implements Refrescable {
         if (seleccionado == null) {
             return;
         }
-        if (!vista.confirmar("¿Eliminar el producto \"" + seleccionado.getNombre() + "\"?")) {
+        if (!vista.confirmar("¿Eliminar el producto \"" + seleccionado.getNombre() + "\"?\nDejará de mostrarse en la tienda.")) {
             return;
         }
         try {

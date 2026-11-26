@@ -10,34 +10,57 @@ import java.util.List;
 
 public class ProductoDAO extends BaseDAO {
 
+    /** Criterios de orden del catalogo. */
+    public enum Orden {
+        NOVEDADES("Novedades", "p.id DESC"),
+        PRECIO_MENOR("Precio: menor a mayor", "p.precio ASC"),
+        PRECIO_MAYOR("Precio: mayor a menor", "p.precio DESC"),
+        NOMBRE("Nombre A-Z", "p.nombre ASC");
+
+        private final String etiqueta;
+        private final String sql;
+
+        Orden(String etiqueta, String sql) {
+            this.etiqueta = etiqueta;
+            this.sql = sql;
+        }
+
+        @Override
+        public String toString() {
+            return etiqueta;
+        }
+    }
+
     private static final String SELECT_BASE =
             "SELECT p.id, p.nombre, p.descripcion, p.categoria_id, c.nombre AS categoria, "
-            + "p.talla, p.color, p.precio, p.stock, p.activo "
+            + "p.tallas, p.color, p.precio, p.stock, p.imagen, p.activo "
             + "FROM productos p INNER JOIN categorias c ON c.id = p.categoria_id "
             + "WHERE p.activo = 1 ";
 
     /**
      * Lista los productos activos.
      *
-     * @param filtro      texto a buscar en nombre o color (puede ser vacio)
+     * @param filtro      texto a buscar en nombre, color o categoria (puede ser vacio)
      * @param categoriaId id de la categoria, o 0 para todas
+     * @param orden       criterio de orden
      */
-    public List<Producto> listar(String filtro, int categoriaId) {
+    public List<Producto> listar(String filtro, int categoriaId, Orden orden) {
         StringBuilder sql = new StringBuilder(SELECT_BASE);
         boolean conFiltro = filtro != null && !filtro.isBlank();
         if (conFiltro) {
-            sql.append("AND (LOWER(p.nombre) LIKE ? OR LOWER(p.color) LIKE ?) ");
+            sql.append("AND (LOWER(p.nombre) LIKE ? OR LOWER(p.color) LIKE ? OR LOWER(c.nombre) LIKE ?) ");
         }
         if (categoriaId > 0) {
             sql.append("AND p.categoria_id = ? ");
         }
-        sql.append("ORDER BY p.nombre");
+        sql.append("ORDER BY ").append((orden == null ? Orden.NOMBRE : orden).sql);
 
         List<Producto> lista = new ArrayList<>();
         try (PreparedStatement ps = conexion().prepareStatement(sql.toString())) {
             int i = 1;
             if (conFiltro) {
                 String patron = "%" + filtro.trim().toLowerCase() + "%";
+                ps.setString(i++, patron);
                 ps.setString(i++, patron);
                 ps.setString(i++, patron);
             }
@@ -55,9 +78,21 @@ public class ProductoDAO extends BaseDAO {
         return lista;
     }
 
+    /** Devuelve el producto con su stock actualizado, o null si ya no existe. */
+    public Producto buscarPorId(int id) {
+        try (PreparedStatement ps = conexion().prepareStatement(SELECT_BASE + "AND p.id = ?")) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapear(rs) : null;
+            }
+        } catch (SQLException e) {
+            throw new DAOException("Error al buscar el producto: " + e.getMessage(), e);
+        }
+    }
+
     public void insertar(Producto p) {
-        String sql = "INSERT INTO productos (nombre, descripcion, categoria_id, talla, color, precio, stock, activo) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, 1)";
+        String sql = "INSERT INTO productos (nombre, descripcion, categoria_id, tallas, color, precio, stock, imagen, activo) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)";
         try (PreparedStatement ps = conexion().prepareStatement(sql)) {
             llenarParametros(ps, p);
             ps.executeUpdate();
@@ -67,11 +102,11 @@ public class ProductoDAO extends BaseDAO {
     }
 
     public void actualizar(Producto p) {
-        String sql = "UPDATE productos SET nombre = ?, descripcion = ?, categoria_id = ?, talla = ?, "
-                + "color = ?, precio = ?, stock = ? WHERE id = ?";
+        String sql = "UPDATE productos SET nombre = ?, descripcion = ?, categoria_id = ?, tallas = ?, "
+                + "color = ?, precio = ?, stock = ?, imagen = ? WHERE id = ?";
         try (PreparedStatement ps = conexion().prepareStatement(sql)) {
             llenarParametros(ps, p);
-            ps.setInt(8, p.getId());
+            ps.setInt(9, p.getId());
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new DAOException("Error al actualizar el producto: " + e.getMessage(), e);
@@ -80,7 +115,7 @@ public class ProductoDAO extends BaseDAO {
 
     /**
      * Eliminacion logica: el producto deja de mostrarse pero se conserva
-     * para no romper el historial de ventas.
+     * para no romper el historial de pedidos.
      */
     public void eliminar(int id) {
         try (PreparedStatement ps = conexion().prepareStatement("UPDATE productos SET activo = 0 WHERE id = ?")) {
@@ -95,10 +130,11 @@ public class ProductoDAO extends BaseDAO {
         ps.setString(1, p.getNombre());
         ps.setString(2, vacioANull(p.getDescripcion()));
         ps.setInt(3, p.getCategoriaId());
-        ps.setString(4, p.getTalla());
+        ps.setString(4, p.getTallas());
         ps.setString(5, p.getColor());
         ps.setDouble(6, p.getPrecio());
         ps.setInt(7, p.getStock());
+        ps.setString(8, vacioANull(p.getImagen()));
     }
 
     private Producto mapear(ResultSet rs) throws SQLException {
@@ -108,10 +144,11 @@ public class ProductoDAO extends BaseDAO {
         p.setDescripcion(rs.getString("descripcion"));
         p.setCategoriaId(rs.getInt("categoria_id"));
         p.setCategoriaNombre(rs.getString("categoria"));
-        p.setTalla(rs.getString("talla"));
+        p.setTallas(rs.getString("tallas"));
         p.setColor(rs.getString("color"));
         p.setPrecio(rs.getDouble("precio"));
         p.setStock(rs.getInt("stock"));
+        p.setImagen(rs.getString("imagen"));
         p.setActivo(rs.getInt("activo") == 1);
         return p;
     }

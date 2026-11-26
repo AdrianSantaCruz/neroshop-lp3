@@ -1,24 +1,26 @@
 package com.neroshop.model;
 
-/** Linea de una venta: un producto con su cantidad y precio. */
-public class DetalleVenta {
+/** Linea de un pedido (o del carrito): un producto en una talla con su cantidad. */
+public class DetallePedido {
 
     private int productoId;
     private String productoNombre;
+    private String imagen;
     private String talla;
     private String color;
     private int cantidad;
     private double precioUnitario;
 
-    public DetalleVenta() {
+    public DetallePedido() {
     }
 
-    public DetalleVenta(Producto p, int cantidad) {
+    public DetallePedido(Producto p, String talla, int cantidad) {
         this.productoId = p.getId();
         this.productoNombre = p.getNombre();
-        this.talla = p.getTalla();
+        this.imagen = p.getImagen();
         this.color = p.getColor();
         this.precioUnitario = p.getPrecio();
+        this.talla = talla;
         this.cantidad = cantidad;
     }
 
@@ -31,6 +33,9 @@ public class DetalleVenta {
 
     public String getProductoNombre() { return productoNombre; }
     public void setProductoNombre(String productoNombre) { this.productoNombre = productoNombre; }
+
+    public String getImagen() { return imagen; }
+    public void setImagen(String imagen) { this.imagen = imagen; }
 
     public String getTalla() { return talla; }
     public void setTalla(String talla) { this.talla = talla; }

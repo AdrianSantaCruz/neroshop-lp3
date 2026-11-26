@@ -8,16 +8,17 @@ import java.awt.BorderLayout;
 public abstract class PanelBase extends JPanel {
 
     protected PanelBase() {
-        super(new BorderLayout(15, 15));
-        setBorder(Estilos.margen(18));
+        super(new BorderLayout(18, 18));
+        setBorder(Estilos.margen(24));
+        setBackground(Estilos.FONDO);
     }
 
     public void mostrarMensaje(String mensaje) {
-        JOptionPane.showMessageDialog(this, mensaje, "NeroShop", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, mensaje, "Nero Thread", JOptionPane.INFORMATION_MESSAGE);
     }
 
     public void mostrarError(String mensaje) {
-        JOptionPane.showMessageDialog(this, mensaje, "NeroShop - Error", JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(this, mensaje, "Nero Thread", JOptionPane.WARNING_MESSAGE);
     }
 
     public boolean confirmar(String mensaje) {

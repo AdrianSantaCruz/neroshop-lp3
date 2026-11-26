@@ -3,7 +3,7 @@ package com.neroshop.controller;
 import com.neroshop.model.Categoria;
 import com.neroshop.model.dao.CategoriaDAO;
 import com.neroshop.model.dao.DAOException;
-import com.neroshop.view.CategoriaPanel;
+import com.neroshop.view.admin.CategoriaPanel;
 
 import java.util.ArrayList;
 import java.util.List;

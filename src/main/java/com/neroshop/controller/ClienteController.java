@@ -3,16 +3,13 @@ package com.neroshop.controller;
 import com.neroshop.model.Cliente;
 import com.neroshop.model.dao.ClienteDAO;
 import com.neroshop.model.dao.DAOException;
-import com.neroshop.view.ClientePanel;
+import com.neroshop.view.admin.ClientePanel;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
+/** Mantenimiento de clientes del panel de administracion. */
 public class ClienteController implements Refrescable {
-
-    private static final Pattern EMAIL = Pattern.compile("^[\\w.+-]+@[\\w-]+(\\.[\\w-]+)+$");
-    private static final Pattern DOCUMENTO = Pattern.compile("^[0-9A-Za-z]{6,15}$");
 
     private final ClientePanel vista;
     private final ClienteDAO dao;
@@ -42,7 +39,7 @@ public class ClienteController implements Refrescable {
             vista.getModelo().setRowCount(0);
             for (Cliente c : clientes) {
                 vista.getModelo().addRow(new Object[]{c.getId(), c.getDocumento(), c.getNombres(),
-                        c.getApellidos(), c.getEmail(), c.getTelefono()});
+                        c.getApellidos(), c.getEmail(), c.getTelefono(), c.getUsuarioId() > 0 ? "Sí" : "No"});
             }
         } catch (DAOException ex) {
             vista.mostrarError(ex.getMessage());
@@ -79,16 +76,9 @@ public class ClienteController implements Refrescable {
         c.setTelefono(vista.getTxtTelefono().getText().trim());
         c.setDireccion(vista.getTxtDireccion().getText().trim());
 
-        if (!DOCUMENTO.matcher(c.getDocumento()).matches()) {
-            vista.mostrarError("El documento debe tener entre 6 y 15 caracteres alfanumericos.");
-            return;
-        }
-        if (c.getNombres().isEmpty() || c.getApellidos().isEmpty()) {
-            vista.mostrarError("Nombres y apellidos son obligatorios.");
-            return;
-        }
-        if (!c.getEmail().isEmpty() && !EMAIL.matcher(c.getEmail()).matches()) {
-            vista.mostrarError("El email no tiene un formato valido.");
+        String error = Validaciones.cliente(c.getDocumento(), c.getNombres(), c.getApellidos(), c.getEmail());
+        if (error != null) {
+            vista.mostrarError(error);
             return;
         }
         try {
@@ -114,7 +104,7 @@ public class ClienteController implements Refrescable {
             return;
         }
         try {
-            dao.eliminar(seleccionado.getId());
+            dao.eliminar(seleccionado);
             refrescar();
             limpiar();
         } catch (DAOException ex) {

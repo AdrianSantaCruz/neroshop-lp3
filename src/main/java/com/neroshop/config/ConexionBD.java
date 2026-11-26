@@ -52,7 +52,7 @@ public final class ConexionBD {
     }
 
     public String getUrl() {
-        return propiedades.getProperty("db.url", "jdbc:sqlite:neroshop.db").trim();
+        return propiedades.getProperty("db.url", "jdbc:sqlite:nerothread.db").trim();
     }
 
     public boolean esSQLite() {

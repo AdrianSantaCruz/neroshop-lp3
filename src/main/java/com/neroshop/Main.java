@@ -8,7 +8,7 @@ import com.neroshop.view.Estilos;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
-/** Punto de entrada de NeroShop. */
+/** Punto de entrada de la tienda Nero Thread. */
 public class Main {
 
     public static void main(String[] args) {
@@ -23,7 +23,7 @@ public class Main {
                 JOptionPane.showMessageDialog(null,
                         "No se pudo iniciar la base de datos:\n" + e.getMessage()
                                 + "\n\nRevisa la configuracion en db.properties.",
-                        "NeroShop", JOptionPane.ERROR_MESSAGE);
+                        "Nero Thread", JOptionPane.ERROR_MESSAGE);
                 System.exit(1);
             }
             LoginController.mostrarLogin();
