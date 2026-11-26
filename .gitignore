@@ -1,0 +1,22 @@
+# Maven
+target/
+
+# Base de datos local generada al ejecutar
+*.db
+
+# Configuracion local (credenciales de MySQL)
+/db.properties
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+nbproject/private/
+nbactions.xml
+.settings/
+.project
+.classpath
+
+# Sistema
+.DS_Store
+Thumbs.db
