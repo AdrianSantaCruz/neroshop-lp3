@@ -12,6 +12,8 @@ Proyecto del curso **Lenguajes de Programación 3**.
 
 ![Catálogo](docs/capturas/03-catalogo.png)
 
+> 📘 **¿Vas a estudiar o modificar el código?** Lee la [Guía de estudio](docs/GUIA_DE_ESTUDIO.md): arquitectura, recorridos paso a paso, recetas de modificación y preguntas frecuentes.
+
 ## Funcionalidades
 
 ### Tienda (cliente)
